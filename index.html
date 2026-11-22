@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1B1A17" />
+    <meta name="description" content="Fieldguide — photograph something, get a plate." />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-title" content="Fieldguide" />
+    <title>Fieldguide</title>
+  </head>
+  <body>
+    <div id="app">
+      <!-- Camera -->
+      <section id="cameraStage" class="stage camera-stage" aria-label="Camera">
+        <video id="viewfinder" playsinline muted autoplay></video>
+        <div class="frame" aria-hidden="true"></div>
+        <div class="topline" aria-hidden="true">
+          <span>Fieldguide</span>
+          <span id="stateWord">starting camera</span>
+        </div>
+
+        <div id="noCamera" class="no-camera" hidden>
+          <div class="no-camera-panel">
+            <p class="label">camera</p>
+            <p class="no-camera-title">No live view here.</p>
+            <p id="noCameraCopy" class="no-camera-copy">The camera isn't available.</p>
+            <button id="pickButton" class="paper-button solid" type="button">Choose a photo</button>
+            <button id="retryCamera" class="link" type="button">Try the camera again</button>
+          </div>
+        </div>
+
+        <div class="camera-foot">
+          <div class="controls">
+            <div class="chrome-group left">
+              <button id="albumButton" class="chrome-button" type="button">album</button>
+              <button id="uploadButton" class="chrome-button" type="button">upload</button>
+            </div>
+            <button id="shutter" class="shutter" aria-label="Capture a plate" type="button"></button>
+            <div class="chrome-group right">
+              <button id="flashButton" class="chrome-button" type="button" aria-pressed="false" hidden>flash</button>
+              <button id="keyButton" class="chrome-button" type="button">key</button>
+            </div>
+          </div>
+          <div id="zoomRow" class="zoom-row" hidden>
+            <span class="zoom-read">zoom <span id="zoomValue">1.0×</span></span>
+            <div class="zoom-steps">
+              <button id="zoomOut" class="chrome-button" type="button" aria-label="Zoom out">−</button>
+              <button id="zoomIn" class="chrome-button" type="button" aria-label="Zoom in">+</button>
+            </div>
+          </div>
+          <div class="ledger" aria-label="Plates by tier">
+            <span class="tier"><span class="tier-mark moss" aria-hidden="true"></span><span class="tier-label">common</span><span class="tier-count" data-tier="common">00</span></span>
+            <span class="tier"><span class="tier-mark kraft" aria-hidden="true"></span><span class="tier-label">notable</span><span class="tier-count" data-tier="notable">00</span></span>
+            <span class="tier"><span class="tier-mark inkblue" aria-hidden="true"></span><span class="tier-label">rare</span><span class="tier-count" data-tier="rare">00</span></span>
+            <span class="tier"><span class="tier-mark madder" aria-hidden="true"></span><span class="tier-label">singular</span><span class="tier-count" data-tier="singular">00</span></span>
+          </div>
+        </div>
+        <input id="fileInput" type="file" accept="image/*" hidden />
+      </section>
+
+      <!-- Reading -->
+      <section id="readingStage" class="stage reading-stage" hidden>
+        <img id="readingPhoto" class="reading-photo" alt="" />
+        <p class="reading-line"><span>reading the plate</span><span class="dots" aria-hidden="true">…</span></p>
+      </section>
+
+      <!-- Album -->
+      <section id="albumStage" class="stage album-stage" hidden aria-label="Album">
+        <header class="album-head">
+          <div>
+            <p class="label">album</p>
+            <h1 class="album-title">The drawer</h1>
+          </div>
+          <button id="albumClose" class="paper-button" type="button">Back</button>
+        </header>
+        <div class="album-counts" aria-label="Plates by tier">
+          <span class="tier"><span class="tier-mark moss" aria-hidden="true"></span><span class="tier-label">common</span><span class="tier-count" data-tier="common">00</span></span>
+          <span class="tier"><span class="tier-mark kraft" aria-hidden="true"></span><span class="tier-label">notable</span><span class="tier-count" data-tier="notable">00</span></span>
+          <span class="tier"><span class="tier-mark inkblue" aria-hidden="true"></span><span class="tier-label">rare</span><span class="tier-count" data-tier="rare">00</span></span>
+          <span class="tier"><span class="tier-mark madder" aria-hidden="true"></span><span class="tier-label">singular</span><span class="tier-count" data-tier="singular">00</span></span>
+        </div>
+        <div id="albumGrid" class="album-grid"></div>
+        <p id="albumEmpty" class="album-empty">Nothing kept yet. A plate stays here only when you tap keep; anything else is dropped, and if the browser runs out of room the commons go first.</p>
+      </section>
+
+      <!-- Card -->
+      <section id="cardStage" class="stage card-stage" hidden>
+        <div id="card" class="card" role="button" tabindex="0" aria-label="Card. Tap to turn it over.">
+          <div class="card-face card-front">
+            <div class="front-frame"><img id="cardPhoto" alt="The photographed subject" /></div>
+            <div id="cardStamp" class="stamp" hidden><span id="stampTier"></span></div>
+            <div class="front-caption">
+              <span id="frontKind"></span>
+              <span id="frontDate"></span>
+            </div>
+          </div>
+
+          <div class="card-face card-back">
+            <div class="back-scroll">
+              <p id="backKind" class="back-kind"></p>
+              <h2 id="backName" class="back-name"></h2>
+              <p id="backTech" class="back-tech"></p>
+              <hr class="rule" />
+              <p id="backClass" class="back-class"></p>
+
+              <section id="blockWhat" class="plate-block">
+                <p class="label">what it is</p>
+                <p id="backDef" class="back-body"></p>
+              </section>
+
+              <section id="blockHow" class="plate-block">
+                <p class="label">how it works</p>
+                <p id="backAnatomy" class="back-body"></p>
+              </section>
+
+              <section id="blockHistory" class="plate-block">
+                <p class="label">history</p>
+                <ul id="backHistory" class="back-list history"></ul>
+              </section>
+
+              <section id="blockWhy" class="plate-block">
+                <p class="label">why it matters</p>
+                <p id="backWhy" class="back-body"></p>
+              </section>
+              <p id="backClosing" class="back-closing"></p>
+              <div id="backMeta" class="back-meta"></div>
+              <div id="backTags" class="back-tags"></div>
+              <p id="backUncertain" class="back-uncertain" hidden></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button id="turnButton" class="paper-button" type="button">Turn the card</button>
+          <button id="keepButton" class="paper-button solid" type="button" hidden>Keep</button>
+          <button id="againButton" class="paper-button" type="button">New plate</button>
+        </div>
+      </section>
+
+      <!-- Refusal -->
+      <section id="slipStage" class="stage slip-stage" hidden>
+        <div class="slip">
+          <p class="label">not this one</p>
+          <p id="slipReason" class="slip-reason"></p>
+          <p class="slip-note">Nothing was saved, and I won't try again.</p>
+        </div>
+        <button id="slipBack" class="paper-button" type="button">Back to the camera</button>
+      </section>
+
+      <p id="statusLine" class="status" role="status" aria-live="polite" hidden></p>
+
+      <div id="notice" class="notice" hidden>
+        <div class="notice-panel">
+          <p class="notice-line">Things, not people.</p>
+          <button id="noticeOk" class="paper-button solid" type="button">Got it</button>
+        </div>
+      </div>
+
+      <!-- Key -->
+      <div id="keySheet" class="sheet" hidden>
+        <div class="sheet-panel">
+          <p class="label">your key</p>
+          <p class="sheet-copy">
+            Fieldguide asks Gemini directly from this browser, using your own API key. The key is
+            kept in this browser only — never sent anywhere else, never logged.
+          </p>
+          <label class="label" for="apiKey">gemini api key</label>
+          <input id="apiKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="AIza…" />
+          <div class="sheet-actions">
+            <button id="saveKey" class="paper-button solid" type="button">Save key</button>
+            <button id="closeSheet" class="link" type="button" hidden>Close</button>
+            <button id="forgetKey" class="link" type="button">Forget key</button>
+          </div>
+          <p id="keyStatus" class="sheet-note"></p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
