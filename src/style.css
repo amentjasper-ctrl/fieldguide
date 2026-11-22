@@ -1,0 +1,1001 @@
+:root {
+  --paper: #f4efe3;
+  --ink: #24231f;
+  --ink-70: rgba(36, 35, 31, 0.7);
+  --ink-45: rgba(36, 35, 31, 0.45);
+  --ink-30: rgba(36, 35, 31, 0.3);
+  --ink-18: rgba(36, 35, 31, 0.18);
+  --stage: #1b1a17;
+  --kraft: #b08a5e;
+  --moss: #6e7a5a;
+  --blue: #3c5a72;
+  --madder: #8c4a4a;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
+    "Times New Roman", serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  border-radius: 0;
+}
+
+:focus-visible {
+  outline: 1.5px solid currentColor;
+  outline-offset: 3px;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------- camera */
+
+/*
+ * The stage is always dark. A live feed covers it; with no feed the paper
+ * chrome and the notice stay legible instead of disappearing into the paper.
+ */
+.camera-stage {
+  overflow: hidden;
+  background: var(--stage);
+}
+
+/*
+ * Zoom is a crop of the sensor feed: the video is scaled about its centre and
+ * grabFrame() draws the same centre crop, so the photograph is what was seen.
+ */
+#viewfinder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--stage);
+  transform: scale(var(--zoom, 1));
+  transform-origin: 50% 50%;
+}
+
+.frame {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(244, 239, 227, 0.55);
+  pointer-events: none;
+}
+
+.topline {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 9px;
+  border-bottom: 1px solid rgba(244, 239, 227, 0.45);
+  background: rgba(20, 19, 17, 0.42);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.camera-foot {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.controls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 2px;
+}
+
+/* The ledger: one hairline, four tiers, counts in monospace. */
+.zoom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 9px;
+  border-top: 1px solid rgba(244, 239, 227, 0.45);
+  background: rgba(20, 19, 17, 0.52);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.zoom-read span {
+  color: var(--paper);
+  letter-spacing: 0.06em;
+}
+
+.zoom-steps {
+  display: flex;
+  gap: 6px;
+}
+
+.zoom-steps .chrome-button {
+  padding: 4px 9px;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.zoom-steps .chrome-button:disabled {
+  color: rgba(244, 239, 227, 0.35);
+  border-color: rgba(244, 239, 227, 0.2);
+  cursor: default;
+}
+
+.ledger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 7px 9px;
+  border-top: 1px solid rgba(244, 239, 227, 0.45);
+  background: rgba(20, 19, 17, 0.52);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tier {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.tier-mark {
+  flex: none;
+  width: 5px;
+  height: 5px;
+}
+
+.tier-mark.kraft {
+  background: var(--kraft);
+}
+
+.tier-mark.moss {
+  background: var(--moss);
+}
+
+.tier-mark.inkblue {
+  background: var(--blue);
+}
+
+.tier-mark.madder {
+  background: var(--madder);
+}
+
+.tier-label {
+  color: rgba(244, 239, 227, 0.66);
+}
+
+.tier-count {
+  color: var(--paper);
+  letter-spacing: 0.06em;
+}
+
+.camera-stage.is-blocked .controls {
+  display: none;
+}
+
+.shutter {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  padding: 0;
+  border: 1px solid rgba(244, 239, 227, 0.9);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.shutter::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: var(--paper);
+}
+
+.shutter:active::after {
+  inset: 12px;
+}
+
+.shutter[aria-busy="true"]::after {
+  inset: 20px;
+}
+
+.chrome-group {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 7px;
+}
+
+.chrome-group.left {
+  left: 0;
+}
+
+.chrome-group.right {
+  right: 0;
+  justify-content: flex-end;
+}
+
+.chrome-button {
+  padding: 6px 8px;
+  border: 1px solid rgba(244, 239, 227, 0.45);
+  background: transparent;
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.chrome-button.is-on {
+  border-color: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Four small controls can crowd a 320px screen; keep the shutter clear. */
+@media (max-width: 340px) {
+  .chrome-button {
+    padding: 6px;
+    font-size: 8px;
+  }
+
+  .chrome-group {
+    gap: 5px;
+  }
+}
+
+.no-camera {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 26px;
+}
+
+.no-camera-panel {
+  width: 100%;
+  max-width: 330px;
+  padding: 20px;
+  border: 1px solid rgba(244, 239, 227, 0.4);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.no-camera-title {
+  margin: 6px 0 8px;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.no-camera-copy {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.no-camera-panel .paper-button {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+/* ---------------------------------------------------------- reading */
+
+.reading-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 28px;
+}
+
+.reading-photo {
+  max-width: min(78vw, 320px);
+  max-height: 54dvh;
+  object-fit: cover;
+  border: 1px solid var(--ink-45);
+}
+
+.reading-line {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+/* ---------------------------------------------------------- card */
+
+.card-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  perspective: 1400px;
+}
+
+.card {
+  position: relative;
+  width: min(92vw, 48dvh);
+  /* Taller than a photo print so the whole plate fits without scrolling. */
+  aspect-ratio: 5 / 8.2;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+  cursor: pointer;
+}
+
+.card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+/* Worn edge: a second hairline just inside the border, no shadow, no glow. */
+.card-face::before,
+.slip::before,
+.sheet-panel::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(36, 35, 31, 0.1);
+  pointer-events: none;
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ink-30);
+  background: var(--paper);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+  container-type: inline-size;
+}
+
+.front-frame {
+  flex: 1;
+  margin: 4cqw 4cqw 0;
+  overflow: hidden;
+  border: 1px solid var(--ink-45);
+}
+
+.front-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.front-caption {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 3cqw;
+  padding: 2.4cqw 4cqw 3cqw;
+  border-top: 1px solid var(--ink-18);
+  font-family: var(--mono);
+  font-size: 2.5cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+/*
+ * The back is a plate, so its type is measured against the card width with
+ * container units: the same plate reads correctly at 280px or 380px wide.
+ */
+.back-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 4.2cqw 4.2cqw 3.8cqw;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.back-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.back-kind {
+  margin: 0 0 1.2cqw;
+  font-family: var(--mono);
+  font-size: 2.6cqw;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.back-name {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 6.6cqw;
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+.back-tech {
+  margin: 1cqw 0 0;
+  font-size: 3.5cqw;
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--ink-70);
+}
+
+.rule {
+  width: 100%;
+  margin: 2.3cqw 0;
+  border: 0;
+  border-top: 1px solid var(--ink-30);
+}
+
+.back-class {
+  margin: 0 0 2.6cqw;
+  font-family: var(--mono);
+  font-size: 2.7cqw;
+  letter-spacing: 0.1em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.back-body {
+  margin: 0;
+  font-size: 3.9cqw;
+  line-height: 1.48;
+}
+
+/* Every teaching block hangs off the same hairline as the plate's rules. */
+.plate-block {
+  padding-top: 2.4cqw;
+  border-top: 1px solid var(--ink-30);
+}
+
+.plate-block + .plate-block {
+  margin-top: 2.4cqw;
+}
+
+.label {
+  margin: 0 0 1.2cqw;
+  font-family: var(--mono);
+  font-size: 2.4cqw;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.back-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.back-list li {
+  padding: 1.7cqw 0;
+}
+
+.back-list li:first-child {
+  padding-top: 0;
+}
+
+.back-list li + li {
+  border-top: 1px solid var(--ink-18);
+}
+
+.history li {
+  display: grid;
+  grid-template-columns: 19cqw 1fr;
+  gap: 2cqw;
+  align-items: baseline;
+}
+
+.history-when {
+  font-family: var(--mono);
+  font-size: 2.7cqw;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  color: var(--ink-70);
+}
+
+.history-what {
+  font-size: 3.5cqw;
+  line-height: 1.42;
+}
+
+.back-closing {
+  margin: 2.6cqw 0 0;
+  font-size: 3.5cqw;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--ink-70);
+}
+
+.back-meta {
+  display: flex;
+  gap: 4.4cqw;
+  margin-top: 3.4cqw;
+  padding-top: 2.4cqw;
+  border-top: 1px solid var(--ink-30);
+  font-family: var(--mono);
+  font-size: 2.6cqw;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.back-meta span span {
+  color: var(--ink);
+}
+
+.back-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4cqw;
+  margin: 2.4cqw 0 0;
+}
+
+.back-tags span {
+  padding: 0.6cqw 1.8cqw;
+  border: 1px solid var(--ink-30);
+  font-family: var(--mono);
+  font-size: 2.5cqw;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.back-uncertain {
+  margin: 2.4cqw 0 0;
+  font-family: var(--mono);
+  font-size: 2.6cqw;
+  line-height: 1.5;
+  color: var(--ink-70);
+}
+
+/* Kept clear of the "more" bar so the last line is never covered. */
+.card.has-more .back-scroll {
+  padding-bottom: 7cqw;
+}
+
+/* Only shown when the plate is longer than the card, so text is never lost. */
+.card.has-more .card-back::after {
+  content: "▾ more";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0.9cqw 0;
+  border-top: 1px solid var(--ink-18);
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 2.3cqw;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--ink-70);
+}
+
+/* The plate is finished: nothing left below, so nothing to point at. */
+.card.is-end .card-back::after {
+  content: none;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.paper-button {
+  padding: 11px 16px;
+  border: 1px solid var(--ink-45);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.paper-button.solid {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* ---------------------------------------------------------- refusal */
+
+.slip-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 24px;
+}
+
+.slip {
+  position: relative;
+  width: min(84vw, 320px);
+  padding: 22px 20px;
+  border: 1px solid var(--ink-45);
+}
+
+.slip-reason {
+  margin: 8px 0 14px;
+  font-size: 19px;
+  line-height: 1.3;
+}
+
+.slip-note {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+/* ---------------------------------------------------------- status */
+
+.status {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(100px + env(safe-area-inset-bottom));
+  z-index: 20;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 11px 13px;
+  border: 1px solid var(--ink-45);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------- key sheet */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: var(--paper);
+  overflow-y: auto;
+}
+
+.sheet-panel {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  padding: 22px;
+  border: 1px solid var(--ink-45);
+}
+
+.sheet-copy {
+  margin: 8px 0 18px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+#apiKey {
+  width: 100%;
+  margin: 6px 0 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--ink-45);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+#apiKey:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-70);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sheet-note {
+  margin: 12px 0 0;
+  min-height: 12px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  color: var(--ink-70);
+}
+
+/* ---------------------------------------------------------- rarity stamp */
+
+.stamp {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  padding: 3px 7px 2px;
+  border: 1px solid currentColor;
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 7.5px;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  transform: rotate(-7deg);
+}
+
+.stamp--common {
+  color: var(--moss);
+}
+
+.stamp--notable {
+  color: var(--kraft);
+}
+
+.stamp--rare {
+  color: var(--blue);
+}
+
+.stamp--singular {
+  color: var(--madder);
+}
+
+/* ---------------------------------------------------------- album */
+
+.album-stage {
+  overflow-y: auto;
+  background: var(--paper);
+  padding-bottom: 28px;
+}
+
+.album-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 16px 12px;
+  border-bottom: 1px solid var(--ink-30);
+  background: var(--paper);
+}
+
+.album-title {
+  margin: 2px 0 0;
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.album-counts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--ink-18);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.album-counts .tier-count {
+  color: var(--ink);
+}
+
+/* The ledger's labels are paper-coloured for the dark camera; on paper they
+   need ink or they vanish. */
+.album-counts .tier-label {
+  color: var(--ink-70);
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding: 16px;
+}
+
+.album-item {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.album-thumb {
+  position: relative;
+  padding: 5px;
+  border: 1px solid var(--ink-30);
+  background: var(--paper);
+}
+
+.album-thumb::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(36, 35, 31, 0.09);
+  pointer-events: none;
+}
+
+.album-thumb img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 7;
+  object-fit: cover;
+}
+
+.album-thumb .stamp {
+  top: 10px;
+  right: 10px;
+  font-size: 7px;
+}
+
+.album-name {
+  display: block;
+  margin-top: 7px;
+  font-size: 13.5px;
+  line-height: 1.2;
+}
+
+.album-date {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.album-empty {
+  margin: 0;
+  padding: 24px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-70);
+}
+
+/* ---------------------------------------------------------- first launch */
+
+.notice {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 19, 17, 0.5);
+}
+
+.notice-panel {
+  position: relative;
+  width: min(84vw, 320px);
+  padding: 22px;
+  border: 1px solid var(--ink-45);
+  background: var(--paper);
+}
+
+.notice-panel::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(36, 35, 31, 0.1);
+  pointer-events: none;
+}
+
+.notice-line {
+  margin: 0 0 18px;
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
